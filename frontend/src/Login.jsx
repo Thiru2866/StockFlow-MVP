@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
-import { readJsonResponse } from './api'
+import { apiUrl, readJsonResponse } from './api'
 
 function Login() {
   const navigate = useNavigate()
@@ -50,7 +50,7 @@ function Login() {
       const body = isSignup
         ? { organization: event.target.organization.value.trim(), email, password }
         : { email, password }
-      const response = await fetch(isSignup ? '/api/signup' : '/api/login', {
+      const response = await fetch(apiUrl(isSignup ? '/signup' : '/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)

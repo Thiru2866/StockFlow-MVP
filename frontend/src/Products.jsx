@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from './Navbar'
-import { api } from './api'
+import { api, apiUrl } from './api'
 
 const emptyForm = {
   name: '',
@@ -251,7 +251,7 @@ export default function Products() {
   const handleExport = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/products/export', {
+      const response = await fetch(apiUrl('/products/export'), {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (!response.ok) throw new Error('Failed to export products')

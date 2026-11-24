@@ -53,6 +53,14 @@ Open the Vite URL shown in the frontend terminal (normally
 `http://127.0.0.1:5000`. Create an account on the signup screen to get started;
 there is no default demo login.
 
+## Deploy
+
+Deploy the backend and frontend separately, with MongoDB available online (for
+example, MongoDB Atlas). Set `MONGO_URI` and a private `JWT_SECRET` in the
+backend host. Set `VITE_API_URL` in the frontend host to the backend's base URL,
+for example `https://your-backend.example.com` (do not add `/api`). Local
+development continues to use the Vite proxy above.
+
 ## Included features
 
 - Organization signup and login with hashed passwords and JWT authentication

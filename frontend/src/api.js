@@ -1,3 +1,9 @@
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
+
+export function apiUrl(path) {
+  return `${API_BASE_URL}/api${path}`
+}
+
 export async function readJsonResponse(response) {
   const contentType = response.headers.get('content-type') || ''
 
@@ -15,7 +21,7 @@ export async function readJsonResponse(response) {
 export async function api(path, options = {}) {
   const token = localStorage.getItem('token')
 
-  const response = await fetch('/api' + path, {
+  const response = await fetch(apiUrl(path), {
     method: options.method || 'GET',
     headers: {
       'Content-Type': 'application/json',

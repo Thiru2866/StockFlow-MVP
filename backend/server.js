@@ -774,10 +774,15 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
     const organizationId = new ObjectId(req.user.organizationId)
     const defaultThreshold = await getDefaultThreshold(req.user.organizationId)
     const products = await db.collection('products').find({ organizationId }).toArray()
+    const now = new Date()
+    const windowStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1))
     const movements = await db.collection('stock_movements')
-      .find({ organizationId })
+      .find({ organizationId, createdAt: { $gte: windowStart } })
       .sort({ createdAt: -1 })
-      .limit(100)
+      .toArray()
+    const orders = await db.collection('orders')
+      .find({ organizationId, createdAt: { $gte: windowStart } })
+      .sort({ createdAt: -1 })
       .toArray()
 
     const inventoryValue = products.reduce((sum, product) =>
@@ -791,6 +796,84 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
     const movementOut = movements.filter((movement) => movement.quantity < 0)
       .reduce((sum, movement) => sum + Math.abs(movement.quantity), 0)
 
+    const months = Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11 + index, 1))
+      return {
+        key: `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`,
+        label: date.toLocaleString('en', { month: 'short', timeZone: 'UTC' }),
+        start: date,
+        end: new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1))
+      }
+    })
+    const monthKey = (date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+    const movementTrend = months.map((month) => {
+      const inMonth = movements.filter((movement) => monthKey(new Date(movement.createdAt)) === month.key)
+      return {
+        label: month.label,
+        stockIn: inMonth.filter((movement) => movement.quantity > 0)
+          .reduce((sum, movement) => sum + movement.quantity, 0),
+        stockOut: inMonth.filter((movement) => movement.quantity < 0)
+          .reduce((sum, movement) => sum + Math.abs(movement.quantity), 0)
+      }
+    })
+    const salesAndPurchases = months.map((month) => {
+      const inMonth = orders.filter((order) => monthKey(new Date(order.createdAt)) === month.key)
+      return {
+        label: month.label,
+        sales: inMonth.filter((order) => order.type === 'sale')
+          .reduce((sum, order) => sum + order.total, 0),
+        purchases: inMonth.filter((order) => order.type === 'purchase')
+          .reduce((sum, order) => sum + order.total, 0)
+      }
+    })
+    const categoryTotals = new Map()
+    for (const product of products) {
+      const category = product.category?.trim() || 'Uncategorized'
+      const entry = categoryTotals.get(category) || { category, products: 0, units: 0, value: 0 }
+      entry.products += 1
+      entry.units += product.quantity
+      entry.value += product.quantity * (product.costPrice ?? 0)
+      categoryTotals.set(category, entry)
+    }
+    const stockHealth = {
+      healthy: products.filter((product) =>
+        product.quantity > (product.lowStockThreshold ?? defaultThreshold)).length,
+      low: products.filter((product) =>
+        product.quantity > 0 && product.quantity <= (product.lowStockThreshold ?? defaultThreshold)).length,
+      outOfStock: products.filter((product) => product.quantity === 0).length
+    }
+    const topSellingMap = new Map()
+    for (const order of orders) {
+      if (order.type !== 'sale') continue
+      for (const item of order.items) {
+        const key = item.productId?.toString() || item.sku
+        const entry = topSellingMap.get(key) || {
+          name: item.name,
+          sku: item.sku,
+          quantity: 0,
+          revenue: 0
+        }
+        entry.quantity += item.quantity
+        entry.revenue += item.quantity * item.price
+        topSellingMap.set(key, entry)
+      }
+    }
+    const topSelling = [...topSellingMap.values()]
+      .sort((left, right) => right.quantity - left.quantity)
+      .slice(0, 8)
+    const inventoryValueTrend = months.map((month) => {
+      const historicValue = products.reduce((sum, product) => {
+        const changesAfterMonth = movements
+          .filter((movement) =>
+            movement.productId?.toString() === product._id.toString() &&
+            new Date(movement.createdAt) >= month.end)
+          .reduce((quantitySum, movement) => quantitySum + movement.quantity, 0)
+        const estimatedQuantity = Math.max(0, product.quantity - changesAfterMonth)
+        return sum + estimatedQuantity * (product.costPrice ?? 0)
+      }, 0)
+      return { label: month.label, value: historicValue }
+    })
+
     return res.json({
       success: true,
       summary: {
@@ -803,7 +886,15 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
         stockOutUnits: movementOut
       },
       lowStock,
-      movements
+      movements: movements.slice(0, 100),
+      charts: {
+        movementTrend,
+        salesAndPurchases,
+        categories: [...categoryTotals.values()].sort((left, right) => right.value - left.value),
+        stockHealth,
+        topSelling,
+        inventoryValueTrend
+      }
     })
   } catch (error) {
     console.error('Reports error:', error.message)

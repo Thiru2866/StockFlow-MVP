@@ -1167,6 +1167,200 @@
   font-size: 16px;
 }
 
+.reports-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 18px;
+}
+
+.report-chart-panel {
+  min-height: 300px;
+  overflow: hidden;
+}
+
+.report-chart-wide {
+  grid-column: span 2;
+}
+
+.chart-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  min-width: 470px;
+  height: auto;
+}
+
+.chart-gridline {
+  stroke: #edf0f5;
+  stroke-width: 1;
+}
+
+.chart-axis-label {
+  fill: #8b95a4;
+  font-size: 10px;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 18px;
+  margin: 0 0 7px 8px;
+  color: #788496;
+  font-size: 11px;
+}
+
+.chart-legend span,
+.health-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.chart-legend i,
+.health-chart-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.chart-footnote {
+  margin: 7px 0 0;
+  color: #929baa;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.category-chart {
+  display: grid;
+  gap: 17px;
+}
+
+.category-chart-row {
+  display: grid;
+  gap: 7px;
+}
+
+.category-chart-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #4b586d;
+  font-size: 11px;
+}
+
+.category-chart-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-chart-label strong {
+  color: #7b8798;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.category-chart-row small {
+  color: #959eab;
+  font-size: 9px;
+}
+
+.category-bar-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f0f3f7;
+}
+
+.category-bar-track span {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+}
+
+.health-chart-wrap {
+  display: flex;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  gap: 27px;
+}
+
+.health-donut {
+  display: grid;
+  width: 160px;
+  height: 160px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.health-donut > div {
+  display: flex;
+  width: 110px;
+  height: 110px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.health-donut strong {
+  color: #243047;
+  font-size: 25px;
+}
+
+.health-donut span {
+  color: #8792a1;
+  font-size: 10px;
+}
+
+.health-chart-legend {
+  display: grid;
+  gap: 14px;
+  color: #687587;
+  font-size: 11px;
+}
+
+.health-chart-legend > div,
+.health-chart-legend span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.health-chart-legend > div {
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.health-chart-legend strong {
+  color: #354156;
+}
+
+.chart-empty {
+  display: grid;
+  min-height: 190px;
+  place-items: center;
+  color: #8994a4;
+  font-size: 12px;
+  text-align: center;
+}
+
+.reports-summary-grid {
+  margin-top: 18px;
+}
+
+.mobile-logout {
+  display: none;
+}
+
 .field-group input:focus {
   border-color: #98b3f0;
   box-shadow: 0 0 0 3px rgba(55, 107, 223, 0.08);
@@ -1594,8 +1788,13 @@
 
 @media (max-width: 850px) {
   .dashboard-grid,
-  .settings-layout {
+  .settings-layout,
+  .reports-chart-grid {
     grid-template-columns: 1fr;
+  }
+
+  .report-chart-wide {
+    grid-column: auto;
   }
 
   .stock-health-panel {
@@ -1697,6 +1896,20 @@
 
   .topbar-account > span:last-child {
     display: none;
+  }
+
+  .mobile-logout {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 9px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #536176;
+    font-size: 10px;
+    font-weight: 650;
   }
 
   .page-content {

@@ -64,6 +64,12 @@ export default function Navbar() {
 }
 
 export function AppShell({ children }) {
+  const navigate = useNavigate()
+  const logout = () => {
+    localStorage.removeItem('token')
+    navigate('/')
+  }
+
   return (
     <div className="app-shell">
       <Navbar />
@@ -81,6 +87,7 @@ export function AppShell({ children }) {
             <span className="account-avatar">SF</span>
             <span>Workspace</span>
           </div>
+          <button className="mobile-logout" type="button" onClick={logout}>Sign out</button>
         </header>
         <div className="page-content">{children}</div>
       </main>

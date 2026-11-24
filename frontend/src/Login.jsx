@@ -61,8 +61,15 @@ function Login() {
         throw new Error(data.message || 'Request failed')
       }
 
-      localStorage.setItem('token', data.token)
-      navigate('/dashboard')
+      if (isSignup) {
+        event.target.reset()
+        setIsSignup(false)
+        setIsError(false)
+        setMessage(`${data.message || 'Registration successful!'} Please sign in with your new account.`)
+      } else {
+        localStorage.setItem('token', data.token)
+        navigate('/dashboard')
+      }
     } catch (error) {
       setIsError(true)
       setMessage(error.message)

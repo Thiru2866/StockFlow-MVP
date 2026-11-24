@@ -889,6 +889,8 @@
 }
 
 .signout-panel {
+  grid-column: 1;
+  width: min(100%, 420px);
   padding: 16px 18px;
 }
 
@@ -1623,13 +1625,14 @@
 }
 
 .preview-card {
+  align-self: center;
   margin-top: 33px;
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.91);
   box-shadow: 0 20px 55px rgba(56, 83, 141, 0.14);
-  transform: rotate(-1deg);
+  transform: none;
 }
 
 .preview-topline,

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AppShell } from './Navbar'
 import { api } from './api'
 
 export default function Settings() {
+  const navigate = useNavigate()
   const [threshold, setThreshold] = useState('')
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
@@ -77,6 +79,11 @@ export default function Settings() {
     } finally {
       setIsChangingPassword(false)
     }
+  }
+
+  const handleSignOut = () => {
+    localStorage.removeItem('token')
+    navigate('/')
   }
 
   return (
@@ -164,6 +171,22 @@ export default function Settings() {
               {message}
             </div>
           )}
+        </article>
+
+        <article className="panel settings-panel signout-panel">
+          <div className="settings-section-heading">
+            <span className="settings-icon signout-icon" aria-hidden="true">↗</span>
+            <div>
+              <h2>Sign out</h2>
+              <p>Sign out of your StockFlow workspace on this device.</p>
+            </div>
+          </div>
+          <div className="settings-form-footer">
+            <span>You will need to sign in again to access your inventory.</span>
+            <button className="button button-secondary" type="button" onClick={handleSignOut}>
+              Sign out
+            </button>
+          </div>
         </article>
 
         <aside className="settings-aside">

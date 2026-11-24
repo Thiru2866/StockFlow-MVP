@@ -7,6 +7,10 @@ export default function Settings() {
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -43,6 +47,35 @@ export default function Settings() {
       setMessage(err.message)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handlePasswordChange = async (event) => {
+    event.preventDefault()
+    setMessage('')
+
+    if (newPassword !== confirmPassword) {
+      setIsError(true)
+      setMessage('New password and confirmation do not match.')
+      return
+    }
+
+    setIsChangingPassword(true)
+    try {
+      await api('/change-password', {
+        method: 'PUT',
+        body: { currentPassword, newPassword }
+      })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setIsError(false)
+      setMessage('Password changed successfully.')
+    } catch (err) {
+      setIsError(true)
+      setMessage(err.message)
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -86,6 +119,43 @@ export default function Settings() {
               <span>Applies to products with no custom threshold.</span>
               <button className="button button-primary" type="submit" disabled={isSaving || threshold === ''}>
                 {isSaving ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </form>
+          {message && (
+            <div className={`alert ${isError ? 'alert-error' : 'alert-success'}`} role={isError ? 'alert' : 'status'}>
+              {message}
+            </div>
+          )}
+        </article>
+
+        <article className="panel settings-panel password-panel">
+          <div className="settings-section-heading">
+            <span className="settings-icon" aria-hidden="true">◎</span>
+            <div>
+              <h2>Password</h2>
+              <p>Change the password used to sign in to this workspace.</p>
+            </div>
+          </div>
+          <form onSubmit={handlePasswordChange} className="settings-form">
+            <div className="form-grid">
+              <div className="field-group">
+                <label htmlFor="current-password">Current password</label>
+                <input id="current-password" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" required />
+              </div>
+              <div className="field-group">
+                <label htmlFor="new-password">New password</label>
+                <input id="new-password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" minLength="6" required />
+              </div>
+              <div className="field-group field-full">
+                <label htmlFor="confirm-password">Confirm new password</label>
+                <input id="confirm-password" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength="6" required />
+              </div>
+            </div>
+            <div className="settings-form-footer">
+              <span>Use at least 6 characters.</span>
+              <button className="button button-primary" type="submit" disabled={isChangingPassword}>
+                {isChangingPassword ? 'Changing…' : 'Change password'}
               </button>
             </div>
           </form>

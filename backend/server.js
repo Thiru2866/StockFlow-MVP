@@ -811,6 +811,184 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
   }
 })
 
+// ---------- Orders ----------
+app.get('/api/orders', authenticateToken, async (req, res) => {
+  try {
+    const orders = await db.collection('orders')
+      .find({ organizationId: new ObjectId(req.user.organizationId) })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray()
+    return res.json({ success: true, orders })
+  } catch (error) {
+    console.error('Get orders error:', error.message)
+    return res.status(500).json({ success: false, message: 'Failed to load orders' })
+  }
+})
+
+app.post('/api/orders', authenticateToken, async (req, res) => {
+  try {
+    const { type, partyName, partyId, items, notes } = req.body
+    if (!['purchase', 'sale'].includes(type)) {
+      return res.status(400).json({ success: false, message: 'Order type must be purchase or sale' })
+    }
+    if (typeof partyName !== 'string' || !partyName.trim()) {
+      return res.status(400).json({ success: false, message: 'Customer or supplier name is required' })
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Add at least one order item' })
+    }
+
+    const organizationId = new ObjectId(req.user.organizationId)
+    const userId = new ObjectId(req.user.userId)
+    const normalizedItems = []
+    let total = 0
+
+    for (const item of items) {
+      if (!ObjectId.isValid(item.productId)) {
+        return res.status(400).json({ success: false, message: 'Invalid product in order' })
+      }
+      const quantity = Number(item.quantity)
+      if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+        return res.status(400).json({ success: false, message: 'Order quantities must be positive whole numbers' })
+      }
+      const price = Number(item.price)
+      if (!Number.isFinite(price) || price < 0) {
+        return res.status(400).json({ success: false, message: 'Invalid item price' })
+      }
+
+      const product = await db.collection('products').findOne({
+        _id: new ObjectId(item.productId),
+        organizationId
+      })
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'One of the selected products was not found' })
+      }
+      if (type === 'sale' && product.quantity < quantity) {
+        return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name}` })
+      }
+
+      normalizedItems.push({
+        productId: product._id,
+        name: product.name,
+        sku: product.sku,
+        quantity,
+        price
+      })
+      total += quantity * price
+    }
+
+    for (const item of normalizedItems) {
+      const product = await db.collection('products').findOne({
+        _id: item.productId,
+        organizationId
+      })
+      const change = type === 'purchase' ? item.quantity : -item.quantity
+      const newQuantity = product.quantity + change
+      await db.collection('products').updateOne(
+        { _id: item.productId, organizationId },
+        { $set: { quantity: newQuantity, lastUpdatedBy: userId, updatedAt: new Date() } }
+      )
+      await db.collection('stock_movements').insertOne({
+        organizationId,
+        productId: item.productId,
+        productName: item.name,
+        sku: item.sku,
+        type: type === 'purchase' ? 'stock-in' : 'sale',
+        quantity: change,
+        previousQuantity: product.quantity,
+        newQuantity,
+        note: `${type === 'purchase' ? 'Purchase' : 'Sale'} order`,
+        createdBy: userId,
+        createdAt: new Date()
+      })
+    }
+
+    const order = {
+      organizationId,
+      type,
+      partyName: partyName.trim(),
+      partyId: partyId && ObjectId.isValid(partyId) ? new ObjectId(partyId) : null,
+      items: normalizedItems,
+      total,
+      status: 'completed',
+      notes: typeof notes === 'string' ? notes.trim() : '',
+      createdBy: userId,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    const result = await db.collection('orders').insertOne(order)
+    return res.status(201).json({
+      success: true,
+      message: `${type === 'purchase' ? 'Purchase' : 'Sale'} order completed`,
+      order: { ...order, _id: result.insertedId }
+    })
+  } catch (error) {
+    console.error('Create order error:', error.message)
+    return res.status(500).json({ success: false, message: 'Failed to create order' })
+  }
+})
+
+app.delete('/api/orders/:id', authenticateToken, async (req, res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid order ID' })
+    }
+    const organizationId = new ObjectId(req.user.organizationId)
+    const order = await db.collection('orders').findOne({
+      _id: new ObjectId(req.params.id),
+      organizationId
+    })
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' })
+    }
+
+    for (const item of order.items) {
+      const product = await db.collection('products').findOne({
+        _id: item.productId,
+        organizationId
+      })
+      if (!product) continue
+      const reversal = order.type === 'purchase' ? -item.quantity : item.quantity
+      const newQuantity = product.quantity + reversal
+      if (newQuantity < 0) {
+        return res.status(400).json({ success: false, message: 'Cannot reverse order because stock would become negative' })
+      }
+    }
+    for (const item of order.items) {
+      const product = await db.collection('products').findOne({
+        _id: item.productId,
+        organizationId
+      })
+      if (!product) continue
+      const reversal = order.type === 'purchase' ? -item.quantity : item.quantity
+      const newQuantity = product.quantity + reversal
+      await db.collection('products').updateOne(
+        { _id: item.productId, organizationId },
+        { $set: { quantity: newQuantity, updatedAt: new Date() } }
+      )
+      await db.collection('stock_movements').insertOne({
+        organizationId,
+        productId: item.productId,
+        productName: item.name,
+        sku: item.sku,
+        type: 'adjustment',
+        quantity: reversal,
+        previousQuantity: product.quantity,
+        newQuantity,
+        note: `Reversal of ${order.type} order`,
+        createdBy: new ObjectId(req.user.userId),
+        createdAt: new Date()
+      })
+    }
+    await db.collection('orders').deleteOne({ _id: order._id, organizationId })
+    return res.json({ success: true, message: 'Order reversed and deleted' })
+  } catch (error) {
+    console.error('Delete order error:', error.message)
+    return res.status(500).json({ success: false, message: 'Failed to reverse order' })
+  }
+})
+
 // ---------- Settings ----------
 app.get('/api/settings', authenticateToken, async (req, res) => {
   try {

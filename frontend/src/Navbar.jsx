@@ -4,6 +4,7 @@ const navigation = [
   { to: '/dashboard', label: 'Dashboard', icon: '▦' },
   { to: '/products', label: 'Inventory', icon: '▤' },
   { to: '/suppliers', label: 'Suppliers', icon: '♙' },
+  { to: '/orders', label: 'Orders', icon: '▱' },
   { to: '/reports', label: 'Reports', icon: '▥' },
   { to: '/settings', label: 'Settings', icon: '⚙' }
 ]

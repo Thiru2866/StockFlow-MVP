@@ -885,6 +885,23 @@
   padding: 24px;
 }
 
+.signout-panel {
+  padding: 16px 18px;
+}
+
+.signout-panel .settings-section-heading {
+  padding-bottom: 12px;
+}
+
+.signout-panel .settings-form-footer {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: 0;
+}
+
 .settings-section-heading {
   display: flex;
   align-items: center;
